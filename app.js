@@ -26,17 +26,17 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 //SE CARGA EL MODULO DE KNEX
 //SE INICIALIZA KNEX CON SQLITE3
+//MENTIRA AHORA ES CON MYSQL2
 
-var db = require('knex')(
-    {
-        client: 'sqlite3',
-        connection: {
-            filename: 'ejercitos.sqlite'
-        },
-        useNullAsDefault: true
+const db = require('knex')({
+    client: 'mysql2',
+    connection: {
+        host: 'localhost',
+        user: 'toni',
+        password: 'toni123',
+        database: 'ejercitos'
     }
-);
-
+});
 
 //ESTAS RUTAS PREDEFINIDAS NO LAS VAMOS A USAR
 //app.use('/', indexRouter);
