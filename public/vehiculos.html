@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/picnic">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://www.jsviews.com/download/jsrender.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-serialize-object/2.5.0/jquery.serialize-object.min.js"></script>
+    <script src="//unpkg.com/navigo@6"></script>
+</head>
+<body>
+
+<section class="flex one center">
+    <article>
+        <h2>Lista de Vehiculos</h2>
+
+        <!-- Templates -->
+        <script id="modify_vehiculo_template" type="text/x-jsrender">
+            <h1>Modificar Cançó</h1>
+            <form id="modify_vehiculo_form" data-id="{{:vehiculo.id}}">
+              <label for="name">ID</label>
+              <input type="text" id="name" name="name" value="{{:vehiculo.name}}">
+              <br>
+              <label for="imagen">Duració</label>
+              <input type="text" id="imagen" name="imagen" value="{{:vehiculo.imagen}}">
+              <br>
+              <label for="paises">Àlbum</label>
+              <select id="paises" name="idpais">
+                {{for paises}}
+                <option value="{{:id}}">{{:name}}</option>
+                {{/for}}
+              </select>
+              <br>
+              <input type="submit" class="button warning" value="Modificar">
+            </form>
+        </script>
+
+        <script id="add_vehiculo_template" type="text/x-jsrender">
+            <h1>Insertar Cançó</h1>
+            <form id="add_vehiculo_form">
+              <label for="name">Nombre</label>
+              <input type="text" id="name" name="name">
+              <br>
+              <label for="imagen">Imagen</label>
+              <input type="text" id="imagen" name="imagen">
+              <br>
+              <label for="pais_id">Pais</label>
+              <select id="pais_id" name="pais_id">
+                {{for paises}}
+                  <option value="{{:id}}">{{:name}}</option>
+                {{/for}}
+              </select>
+              <br>
+              <button type="submit" class="button success">Guardar</button>
+            </form>
+        </script>
+
+        <div id="app"></div>
+        <a href="#!/vehiculos/add" class="add btn button">Afegir</a>
+
+        <br><br>
+        <table class="primary">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Imagen</th>
+                <th>Pais</th>
+                <th>Organizacion</th>
+                <th>Accions</th>
+            </tr>
+            </thead>
+            <tbody id="llista-vehiculos"></tbody>
+        </table>
+
+        <a href="index.html" class="button success">Torna a l’índex</a>
+    </article>
+</section>
+
+<script id="plantillavehiculos" type="text/x-jsrender">
+    {{for vehiculos}}
+    <tr>
+        <td>{{:id}}</td>
+        <td>{{:name}}</td>
+        <td><img src="{{:imagen}}" style="width: 150px;"></td>
+        <td>{{:pais}}</td>
+        <td>{{:organizacion}}</td>
+        <td>
+            <a href="#!/vehiculos/{{:id}}/modify" class="button warning">Modify</a>
+            <a href="#!/vehiculos/{{:id}}/delete" class="button error delete-btn">Delete</a>
+        </td>
+    </tr>
+    {{/for}}
+</script>
+
+<script>
+    const router = new Navigo(null, true, '#!');
+
+    function cargarvehiculos() {
+        $.getJSON("/api/vehiculos/all", function (data) {
+            const html = $("#plantillavehiculos").render({vehiculos: data});
+            $("#llista-vehiculos").html(html);
+        });
+    }
+
+    function addvehiculo() {
+        $.getJSON('/api/paises', function (paises) {
+            const html = $("#add_vehiculo_template").render({paises: paises});
+            $("#app").html(html);
+            $("#add_vehiculo_form").on("submit", addvehiculoForm);
+        });
+    }
+
+    function addvehiculoForm(event) {
+        event.preventDefault();
+        let form = $("#add_vehiculo_form");
+        let parametros = form.serializeObject();
+        parametros.pais_id = parseInt(parametros.pais_id);
+        $.post('/api/vehiculos', parametros, function () {
+            $("#app").empty();
+            router.navigate('/');
+        }).catch(console.log);
+    }
+
+    function showModifyvehiculoForm(params) {
+        $.getJSON("/api/vehiculos/" + params.id, function (datavehiculo) {
+            $.getJSON("/api/paises", function (datapaises) {
+                const vehiculo = datavehiculo[0];
+                const html = $("#modify_vehiculo_template").render({
+                    vehiculo: vehiculo,
+                    paises: datapaises
+                });
+                $("#app").html(html);
+                $("#paises").val(vehiculo.pais_id);
+                $("#modify_vehiculo_form").on("submit", getModifyvehiculoFormParams);
+            });
+        });
+    }
+
+    function getModifyvehiculoFormParams(event) {
+        event.preventDefault();
+        let form = $("#modify_vehiculo_form");
+        let parametros = form.serializeObject();
+        parametros.pais_id = parseInt(parametros.idpais);
+        delete parametros.idpais;
+        let id = form.data("id");
+
+        $.post("/api/vehiculos/" + id, parametros, function () {
+            $("#app").empty();
+            router.navigate('/');
+        }).catch(console.log);
+    }
+
+    function deletevehiculo(params) {
+        $.ajax({
+            url: '/api/vehiculos/' + params.id,
+            type: 'DELETE'
+        }).then(function () {
+            router.navigate('/');
+        }).catch(console.log);
+    }
+
+    router
+        .on('/', cargarvehiculos)
+        .on('/vehiculos/add', addvehiculo)
+        .on('/vehiculos/:id/modify', showModifyvehiculoForm)
+        .on('/vehiculos/:id/delete', deletevehiculo)
+        .resolve();
+</script>
+
+</body>
+</html>

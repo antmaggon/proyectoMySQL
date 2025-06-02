@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/picnic">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://www.jsviews.com/download/jsrender.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-serialize-object/2.5.0/jquery.serialize-object.min.js" integrity="sha512-Gn0tSSjkIGAkaZQWjx3Ctl/0dVJuTmjW/f9QyB302kFjU4uTNP4HtA32U2qXs/TRlEsK5CoEqMEMs7LnzLOBsA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="//unpkg.com/navigo@6"></script>
+</head>
+<body>
+
+<section class="flex one center">
+    <article>
+        <h2>Lista de Paises</h2>
+        <script id="modify_pais_template" type="text/x-jsrender">
+            <h1>Modificar pais</h1>
+            <form id="ModifypaisForm" data-id="{{:pais.id}}">
+                <label for="name">Titol</label>
+                <input type="text" id="name" name="name" value="{{:pais.name}}">
+                <br>
+                <label for="organizaciones">organizaciona</label>
+                <select id="organizaciones" name="idorganizacion">
+                    {{for organizaciones}}
+                    <option value="{{:id}}">{{:name}}</option>
+                    {{/for}}
+                </select>
+                <br>
+                <label for="image">Imatge</label>
+                <input type="text" id="image" name="image" value="{{:pais.image}}">
+                <br>
+                <label for="description">Descripcio</label>
+                <input type="text" id="description" name="description" value="{{:pais.description}}">
+                <input type="submit" class="button warning add_pais_submit" value="Modificar" data-id="{{:pais.id}}">
+            </form>
+        </script>
+
+        <script id="add_pais_template" type="text/x-jsrender">
+            <h1>Insertar pais</h1>
+            <form id="add_pais_form">
+                <label for="name">Titol</label>
+                <input type="text" id="name" name="name">
+                <br>
+                <label for="organizaciones">organizaciona</label>
+                <select id="organizaciones" name="idorganizacion">
+                    {{for organizaciones}}
+                    <option value="{{:id}}">{{:name}}</option>
+                    {{/for}}
+                </select>
+                <br>
+                <label for="image">Imatge</label>
+                <input type="text" id="image" name="image">
+                <br>
+                <label for="description">Descripcio</label>
+                <input type="text" id="description" name="description">
+                <button type="submit" class="button success">Guardar</button>
+            </form>
+        </script>
+
+        <div id="app"></div>
+        <a href="#!/paises/add" class="add btn button">Add</a>
+
+        <br><br>
+        <table class="primary">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Organizacion</th>
+                <th>Imagen</th>
+                <th>Descripcion</th>
+                <th>Accions</th>
+            </tr>
+            </thead>
+            <tbody id="llista-paises"></tbody>
+        </table>
+
+        <a href="index.html" class="button success">Torna a l’índex</a>
+    </article>
+</section>
+
+<!-- Template JsRender -->
+<script id="plantillapaises" type="text/x-jsrender">
+    {{for paises}}
+      <tr>
+        <td>{{:id}}</td>
+        <td>{{:name}}</td>
+        <td>{{:organizacion}}</td>
+        <td><img src="{{:image}}" style="width: 60px;"></td>
+        <td><textarea readonly>{{:description}}</textarea></td>
+        <td>
+          <a href="#!/paises/{{:id}}/modify" class="modify button warning">Modify</a>
+          <a href="#!/paises/{{:id}}/delete" class="delete button error delete-btn">Delete</a>
+        </td>
+      </tr>
+    {{/for}}
+</script>
+
+<script>
+
+    var root = null;
+    var useHash = true;
+    var hash = '#!';
+    var router = new Navigo(root, useHash, hash);
+
+
+
+
+    function cargarpaises() {
+        $.getJSON("/api/paises", function (data) {
+            const html = $("#plantillapaises").render({paises: data});
+            $("#llista-paises").html(html);
+        });
+    }
+
+
+    function addpais() {
+        $.getJSON('/api/organizaciones', function (organizaciones) {
+            let html = $("#add_pais_template").render({organizaciones: organizaciones});
+            $("#app").html(html);
+            $("#add_pais_form").on("submit", addpaisForm);
+        });
+    }
+
+
+    function addpaisForm(event) {
+        event.preventDefault();
+        let form = $("#add_pais_form");
+        let parametros = form.serializeObject();
+        parametros.organizacion_id = parseInt(parametros.idorganizacion);
+        delete parametros.idorganizacion;
+
+        $.post('api/paises', parametros, function (result) {
+            router.navigate('/');
+        }).catch(function (error) {
+            console.log(error);
+        });
+    }
+
+    function showModifypaisForm(params) {
+        $.getJSON("/api/paises/" + params.id, function (datapais) {
+            $.getJSON("/api/organizaciones", function (dataorganizaciones) {
+                let pais = datapais[0];
+                let data = {
+                    'pais': pais,
+                    'organizaciones': dataorganizaciones
+                };
+                let html = $("#modify_pais_template").render(data);
+                $('#app').html(html);
+                $("#organizaciones").val(pais.organizacion_id);
+                $('#ModifypaisForm').on('submit', getModifypaisFormsParams);
+            });
+        });
+    }
+
+    function getModifypaisFormsParams(event) {
+        event.preventDefault();
+        let form = $('#ModifypaisForm');
+        let parametros = form.serializeObject();
+        parametros.organizacion_id = parseInt(parametros.idorganizacion);
+        delete parametros.idorganizacion;
+        let id = form.data("id");
+
+        $.post('/api/paises/' + id, parametros, function (data) {
+            router.navigate('/');
+        }).catch(function (error) {
+            console.log(error);
+        });
+    }
+
+    function deletepais(params) {
+        $.ajax({
+            url: '/api/paises/' + params.id,
+            type: 'DELETE'
+        })
+            .then(function (result) {
+                router.navigate('/');
+            })
+            .catch(function (error) {
+                console.log(error);
+            });
+    }
+    router
+        .on('/', cargarpaises)
+        .on('/paises/add', addpais)
+        .on('/paises/:id/modify', showModifypaisForm)
+        .on('/paises/:id/delete', deletepais)
+        .resolve();
+
+</script>
+
+</body>
+</html>

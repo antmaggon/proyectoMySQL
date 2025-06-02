@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <title>organizaciones</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/picnic">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://www.jsviews.com/download/jsrender.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-serialize-object/2.5.0/jquery.serialize-object.min.js"></script>
+    <script src="//unpkg.com/navigo@6"></script>
+
+    <style>
+        #app {
+            margin-bottom: 2em;
+        }
+    </style>
+</head>
+<body>
+
+<section class="flex one center">
+    <article>
+        <h1>Lista de organizaciones</h1>
+
+        <div id="app"></div> <!-- El formulario estará aquí arriba -->
+
+        <a href="#!/organizaciones/add" class="button add">Afegir</a>
+
+        <table class="primary">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nom</th>
+                <th>Accions</th>
+            </tr>
+            </thead>
+            <tbody id="llista-organizaciones"></tbody>
+        </table>
+
+        <a href="index.html" class="button success">Torna a l’índex</a>
+    </article>
+</section>
+
+<!-- Templates -->
+<script id="plantillaorganizaciones" type="text/x-jsrender">
+    {{for organizaciones}}
+    <tr>
+        <td>{{:id}}</td>
+        <td>{{:name}}</td>
+        <td>
+            <a href="#!/organizaciones/{{:id}}/modify" class="button warning">Modify</a>
+            <a href="#!/organizaciones/{{:id}}/delete" class="button error">Delete</a>
+        </td>
+    </tr>
+    {{/for}}
+</script>
+
+<script id="add_organizacion_template" type="text/x-jsrender">
+    <form id="add_organizacion_form">
+        <label for="name">Nom</label>
+        <input type="text" name="name" id="name">
+        <input type="submit" value="Afegir" class="button primary">
+    </form>
+</script>
+
+<script id="modify_organizacion_template" type="text/x-jsrender">
+    <form id="ModifyorganizacionForm" data-id="{{:organizacion.id}}">
+        <label for="name">Nom</label>
+        <input type="text" name="name" id="name" value="{{:organizacion.name}}">
+        <input type="submit" value="Modificar" class="button warning">
+    </form>
+</script>
+
+<script>
+    var root = null;
+    var useHash = true;
+    var hash = '#!';
+    var router = new Navigo(root, useHash, hash);
+
+    function cargarorganizaciones() {
+        $.getJSON("/api/organizaciones", function (data) {
+            const html = $("#plantillaorganizaciones").render({ organizaciones: data });
+            $("#llista-organizaciones").html(html);
+            $("#app").empty();
+        });
+    }
+
+    function addorganizacion() {
+        const html = $("#add_organizacion_template").render();
+        $("#app").html(html);
+        $("#add_organizacion_form").on("submit", addorganizacionForm);
+    }
+
+    function addorganizacionForm(event) {
+        event.preventDefault();
+        let parametros = $("#add_organizacion_form").serializeObject();
+        $.post("/api/organizaciones", parametros, function () {
+            router.navigate('/');
+        }).catch(console.log);
+    }
+
+    function showModifyorganizacionForm(params) {
+        $.getJSON("/api/organizaciones/" + params.id, function (dataorganizacion) {
+            const html = $("#modify_organizacion_template").render({ organizacion: dataorganizacion[0] });
+            $("#app").html(html);
+            $("#ModifyorganizacionForm").on("submit", getModifyorganizacionFormParams);
+        });
+    }
+
+    function getModifyorganizacionFormParams(event) {
+        event.preventDefault();
+        const form = $('#ModifyorganizacionForm');
+        let parametros = form.serializeObject();
+        const id = form.data("id");
+        $.post('/api/organizaciones/' + id, parametros, function () {
+            router.navigate('/');
+        }).catch(console.log);
+    }
+
+    function deleteorganizacion(params) {
+        $.ajax({
+            url: '/api/organizaciones/' + params.id,
+            type: 'DELETE'
+        }).then(function () {
+            router.navigate('/');
+        });
+    }
+
+    router
+        .on('/', cargarorganizaciones)
+        .on('/organizaciones/add', addorganizacion)
+        .on('/organizaciones/:id/modify', showModifyorganizacionForm)
+        .on('/organizaciones/:id/delete', deleteorganizacion)
+        .resolve();
+</script>
+
+</body>
+</html>
